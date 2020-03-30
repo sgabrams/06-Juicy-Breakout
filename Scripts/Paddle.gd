@@ -1,5 +1,20 @@
 extends KinematicBody2D
 
+onready var _shape = $ColorRect.get_rect().size
+onready var _view = get_viewport().get_visible_rect().size
+onready var _collision_transform = $CollisionShape2D.get_transform().get_scale()
+
+export var distort_x = 2.0
+export var distort_y = 1.2
+
+var _target = position 
+
+func _ready():
+	set_process(true)
+	position.y = -30
+	$Tween.interpolate_property(self, "position", position, _target, 1.0, Tween.TRANS_BOUNCE, Tween.EASE_OUT)
+	$Tween.start()
+
 func _physics_process(delta):
 	var shape = $ColorRect.get_rect().size
 	var view = get_viewport().get_visible_rect().size
@@ -8,4 +23,29 @@ func _physics_process(delta):
 		target = shape.x / 2
 	if target > view.x - shape.x / 2:
 		target = view.x - shape.x / 2
-	position = Vector2(target, position.y)
+	
+
+#stretch paddle
+	if target != position.x:
+		var x = position.x + ((target - position.x)*0.2)
+		var w = 1 + (distort_x * (abs(target - position.x) / _view.x))
+		var h = 1 - (1/distort_y * (abs(target - position.x) / _view.y))
+		_change_size(w,h)
+		position = Vector2(x, position.y)
+	else:
+		_change_size(1,1)
+
+func _change_size(w, h):
+	$ColorRect.rect_scale = Vector2(w, h)
+	$CollisionShape2D.set_scale(Vector2(_collision_transform.x*w, _collision_transform.y*h))
+	
+func draw_circle_arc(center, radius, angle_from, angle_to, color):
+	var nb_points = 32
+	var points_arc = PoolVector2Array()
+
+	for i in range(nb_points + 1):
+		var angle_point = deg2rad(angle_from + i * (angle_to-angle_from) / nb_points - 90)
+		points_arc.push_back(center + Vector2(cos(angle_point), sin(angle_point)) * radius)
+
+	for index_point in range(nb_points):
+		draw_line(points_arc[index_point], points_arc[index_point + 1], color)
